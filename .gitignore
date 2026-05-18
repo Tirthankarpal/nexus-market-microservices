@@ -1,0 +1,19 @@
+# Root GitIgnore for Microservices Ecosystem
+
+# Ignore Gradle compilation targets across all sub-services
+**/build/
+**/.gradle/
+!**/gradle/wrapper/gradle-wrapper.jar
+
+# Ignore local IntelliJ IDEA project settings
+**/.idea/
+**/*.iml
+**/*.iws
+**/*.ipr
+**/out/
+
+# Operating System garbage files
+.DS_Store
+Thumbs.db
+log/
+*.log
