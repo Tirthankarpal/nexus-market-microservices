@@ -1,8 +1,8 @@
 package com.nexusmarket.product.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.*;//jakarta docs: https://jakarta.ee/learn/docs/jakartaee-tutorial/current/persist/persistence-intro/persistence-intro.html
+import lombok.AllArgsConstructor;//Lombok docs: https://www.geeksforgeeks.org/java/introduction-to-project-lombok-in-java-and-how-to-get-started/
 import lombok.Data;
 import lombok.NoArgsConstructor;
 

@@ -1,19 +1,35 @@
-# Root GitIgnore for Microservices Ecosystem
-
-# Ignore Gradle compilation targets across all sub-services
+# --- Build & Compiled Artifacts ---
 **/build/
 **/.gradle/
-!**/gradle/wrapper/gradle-wrapper.jar
-
-# Ignore local IntelliJ IDEA project settings
-**/.idea/
-**/*.iml
-**/*.iws
-**/*.ipr
 **/out/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
 
-# Operating System garbage files
+# --- IDE & Editor Settings ---
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+
+# --- Operating System Files ---
 .DS_Store
 Thumbs.db
-log/
+
+# --- Security & Secrets ---
+# Keep your actual database and API credentials local
+.env
+.env.*
+
+# --- Log Files ---
 *.log
+logs/
+
+# --- Gradle Wrapper (keep this!) ---
+!**/gradle/wrapper/gradle-wrapper.jar
