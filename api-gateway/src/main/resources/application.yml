@@ -6,21 +6,51 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      # ✅ MODERN NAMESPACE CONFIGURATION:
       server:
         webflux:
           routes:
+            # Route for Authentication
+            - id: auth-service-route
+              uri: lb://AUTH-SERVICE
+              predicates:
+                - Path=/auth/**
+              filters:
+                - StripPrefix=1
+
+            # Route for Products
             - id: product-service-route
               uri: lb://PRODUCT-SERVICE
               predicates:
-                - Path=/api/v1/products,/api/v1/products/**
+                - Path=/api/v1/products/**
               filters:
                 - name: CircuitBreaker
                   args:
                     name: productCircuitBreaker
                     fallbackUri: forward:/fallback/product
 
-# RESILIENCE4J CONFIGURATION stays at root level
+# These settings enable the route debugging endpoint
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "gateway,health,info"
+  endpoint:
+    gateway:
+      access: unrestricted
+
+eureka:
+  client:
+    service-url:
+      # CRITICAL: Use 'discovery-server' (Docker service name), not 'localhost'
+      defaultZone: http://discovery-server:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# Your JWT settings
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+
+# Resilience4j config (for CircuitBreaker fallback)
 resilience4j:
   circuitbreaker:
     instances:
@@ -29,19 +59,3 @@ resilience4j:
         failureRateThreshold: 50
         waitDurationInOpenState: 10s
         permittedNumberOfCallsInHalfOpenState: 3
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-  instance:
-    prefer-ip-address: true
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "gateway"
-  endpoint:
-    gateway:
-      access: unrestricted
