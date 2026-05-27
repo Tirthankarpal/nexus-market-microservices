@@ -1,0 +1,2 @@
+CREATE DATABASE nexus_auth;
+CREATE DATABASE product_db;
