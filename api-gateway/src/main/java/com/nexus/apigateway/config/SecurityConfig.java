@@ -15,8 +15,9 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchange -> exchange
-                        .pathMatchers("/auth/**").permitAll() // Open the door for auth endpoints
-                        .anyExchange().authenticated() // Bouncer checks everything else
+                        .pathMatchers("/auth/**").permitAll()
+                        .pathMatchers("/actuator/**").permitAll() // ADD THIS
+                        .anyExchange().permitAll()
                 )
                 .build();
     }

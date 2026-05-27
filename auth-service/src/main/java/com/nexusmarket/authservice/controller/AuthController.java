@@ -7,20 +7,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
+// Removing @RequestMapping("/auth") here to match the stripped path coming from Gateway
 public class AuthController {
 
     @Autowired
     private AuthService service;
 
-    // Endpoint to create a new user account
-    @PostMapping("/register")
+    @PostMapping("/register") // Matches the stripped path
     public String addNewUser(@RequestBody UserCredential user) {
         return service.saveUser(user);
     }
 
-    // Endpoint to login and get a token
-    @PostMapping("/login")
+    @PostMapping("/login") // Matches the stripped path
     public String getToken(@RequestBody AuthRequest authRequest) {
         return service.generateToken(authRequest.getUsername(), authRequest.getPassword());
     }

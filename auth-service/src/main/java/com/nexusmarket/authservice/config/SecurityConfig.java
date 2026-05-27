@@ -22,7 +22,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable()) // We disable CSRF because JWTs are immune to it
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/auth/login", "/auth/register").permitAll() // Open the front door.anyRequest().authenticated() // Lock everything else down
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/login", "/register").permitAll() // Open the front door to login and registration
+                        .anyRequest().authenticated() // Lock everything else down
                 );
         return http.build();
     }

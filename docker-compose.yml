@@ -2,15 +2,13 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: nexus-postgres
-    # ports:
-    #   - "5433:5432" # Uncomment if you need to use pgAdmin locally
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${AUTH_DB_NAME} # Creates nexus_auth automatically
+      POSTGRES_DB: ${AUTH_DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d/ # Runs the script for product_db
+      - ./init-scripts:/docker-entrypoint-initdb.d/
 
   discovery-server:
     build: ./discovery-server
