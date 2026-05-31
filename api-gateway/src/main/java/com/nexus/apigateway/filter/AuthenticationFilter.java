@@ -21,28 +21,49 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
 
-        // 1. OPEN THE FRONT DOOR: Let login & register requests pass through safely
+        // Bypass authentication for public auth endpoints
         if (path.startsWith("/auth/")) {
             return chain.filter(exchange);
         }
 
-        // 2. CHECK FOR A PASS: Does the request have an Authorization header?
-        // FIX: Using the modern containsHeader() instead of containsKey()
+        // Verify the presence of the Authorization header
         if (!exchange.getRequest().getHeaders().containsHeader(HttpHeaders.AUTHORIZATION)) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete(); // Block request
+            return exchange.getResponse().setComplete();
         }
 
-        // 3. EXAMINE THE PASS: Extract the "Bearer [token]"
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
 
             try {
-                // 4. VALIDATE: Check the digital wax seal
+                // Validate JWT signature and expiration
                 jwtUtil.validateToken(token);
+
+                // Extract principal and role from JWT claims
+                io.jsonwebtoken.Claims claims = jwtUtil.getClaims(token);
+                String username = claims.getSubject();
+                String role = claims.get("role", String.class);
+
+                // Enforce ADMIN role on write operations to product or inventory paths
+                String method = exchange.getRequest().getMethod().name();
+                if ((path.startsWith("/api/v1/products") || path.startsWith("/api/v1/inventory"))
+                        && (method.equals("POST") || method.equals("PUT") || method.equals("DELETE"))) {
+                    if (role == null || !role.equalsIgnoreCase("ADMIN")) {
+                        exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                        return exchange.getResponse().setComplete();
+                    }
+                }
+
+                // Propagate authenticated user context downstream
+                org.springframework.http.server.reactive.ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+                        .header("X-Authenticated-User", username)
+                        .header("X-Authenticated-Role", role != null ? role : "USER")
+                        .build();
+
+                return chain.filter(exchange.mutate().request(mutatedRequest).build());
+
             } catch (Exception e) {
-                // If it's tampered with or expired, block it!
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
@@ -50,9 +71,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
-
-        // 5. SUCCESS: Let the request pass to the inner microservices!
-        return chain.filter(exchange);
     }
 
     @Override

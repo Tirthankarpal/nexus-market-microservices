@@ -9,7 +9,7 @@ public class FallbackController {
 
     @GetMapping("/fallback/product")
     public Mono<String> productFallback() {
-        // Corrected factory method for static text strings
+        // factory method for static text strings
         return Mono.just("The Product Catalog is temporarily unavailable. Our engineering team has been notified. Please try again shortly.");
     }
 }
