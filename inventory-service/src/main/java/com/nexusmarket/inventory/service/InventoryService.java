@@ -59,4 +59,15 @@ public class InventoryService {
         inventory.setQuantity(inventory.getQuantity() + quantity);
         inventoryRepository.save(inventory);
     }
+    
+    /**
+     * Sets absolute stock level for a SKU.
+     */
+    @Transactional
+    public void setStock(String skuCode, Integer quantity) {
+        Inventory inventory = inventoryRepository.findBySkuCode(skuCode)
+                .orElse(Inventory.builder().skuCode(skuCode).quantity(0).build());
+        inventory.setQuantity(quantity);
+        inventoryRepository.save(inventory);
+    }
 }

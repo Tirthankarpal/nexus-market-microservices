@@ -54,4 +54,22 @@ public class InventoryController {
         inventoryService.addStock(skuCode, quantity);
         return ResponseEntity.status(HttpStatus.CREATED).body("Stock updated successfully");
     }
+
+    /**
+     * Endpoint to set absolute stock level (restricted to ADMIN role).
+     */
+    @PutMapping("/set")
+    public ResponseEntity<String> setStock(
+            @RequestParam String skuCode,
+            @RequestParam Integer quantity,
+            @RequestHeader(value = "X-Authenticated-Role", required = false) String role) {
+        
+        // Enforce role-based boundary restriction
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only ADMIN can set stock levels");
+        }
+        
+        inventoryService.setStock(skuCode, quantity);
+        return ResponseEntity.ok("Stock level updated successfully");
+    }
 }
