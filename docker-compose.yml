@@ -13,6 +13,8 @@ services:
   discovery-server:
     build: ./discovery-server
     container_name: discovery-server
+    environment:
+      - EUREKA_PASSWORD=${EUREKA_PASSWORD}
     ports:
       - "8761:8761"
 

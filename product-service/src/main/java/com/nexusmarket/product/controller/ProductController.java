@@ -15,8 +15,8 @@ public class ProductController {
         this.productService = productService;
     }
     @GetMapping // Handles GET requests to /api/v1/products
-    public List<Product> getAllProducts() {
-        return productService.getAllProducts();
+    public org.springframework.data.domain.Page<Product> getAllProducts(org.springframework.data.domain.Pageable pageable) {
+        return productService.getAllProducts(pageable);
     }
     @PostMapping // Handles POST requests to /api/v1/products to create a new product
     public Product createProduct(@Valid @RequestBody Product product) {

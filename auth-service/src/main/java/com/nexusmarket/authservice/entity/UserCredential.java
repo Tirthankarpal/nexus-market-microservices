@@ -1,6 +1,7 @@
 package com.nexusmarket.authservice.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "user_credentials")
@@ -10,9 +11,11 @@ public class UserCredential {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Username cannot be blank")
     @Column(unique = true, nullable = false)
     private String username;
 
+    @NotBlank(message = "Password cannot be blank")
     @Column(nullable = false)
     private String password;
 

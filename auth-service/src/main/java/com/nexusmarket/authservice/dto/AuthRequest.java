@@ -1,7 +1,13 @@
 package com.nexusmarket.authservice.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class AuthRequest {
+
+    @NotBlank(message = "Username cannot be blank")
     private String username;
+
+    @NotBlank(message = "Password cannot be blank")
     private String password;
 
     // Getters and Setters

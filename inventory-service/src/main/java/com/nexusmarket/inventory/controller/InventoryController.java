@@ -47,7 +47,7 @@ public class InventoryController {
             @RequestHeader(value = "X-Authenticated-Role", required = false) String role) {
         
         // Enforce role-based boundary restriction
-        if (role != null && !role.equalsIgnoreCase("ADMIN")) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only ADMIN can stock inventory items");
         }
         

@@ -119,13 +119,13 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<Order> getAllOrders() {
-        return orderRepository.findAll();
+    public org.springframework.data.domain.Page<Order> getOrdersByUser(String username, org.springframework.data.domain.Pageable pageable) {
+        return orderRepository.findByUserEmail(username, pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<Order> getOrdersByUser(String userEmail) {
-        return orderRepository.findByUserEmail(userEmail);
+    public org.springframework.data.domain.Page<Order> getAllOrders(org.springframework.data.domain.Pageable pageable) {
+        return orderRepository.findAll(pageable);
     }
 
     private OrderItem mapToEntity(OrderItemDto dto) {

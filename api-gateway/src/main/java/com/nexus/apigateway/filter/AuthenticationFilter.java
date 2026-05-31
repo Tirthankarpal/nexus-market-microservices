@@ -21,8 +21,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
 
-        // Bypass authentication for public auth endpoints
-        if (path.startsWith("/auth/")) {
+        // Bypass authentication for public auth and actuator endpoints
+        if (path.startsWith("/auth/") || path.startsWith("/actuator/")) {
             return chain.filter(exchange);
         }
 

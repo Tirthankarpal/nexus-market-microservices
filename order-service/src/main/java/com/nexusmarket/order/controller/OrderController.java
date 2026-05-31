@@ -37,14 +37,15 @@ public class OrderController {
     @GetMapping
     public ResponseEntity<?> getOrders(
             @RequestHeader("X-Authenticated-User") String username,
-            @RequestHeader("X-Authenticated-Role") String role) {
+            @RequestHeader("X-Authenticated-Role") String role,
+            org.springframework.data.domain.Pageable pageable) {
         
         // ADMIN gets to see all orders in the entire system.
         if (role != null && role.equalsIgnoreCase("ADMIN")) {
-            return ResponseEntity.ok(orderService.getAllOrders());
+            return ResponseEntity.ok(orderService.getAllOrders(pageable));
         }
         
         // Standard USER only gets to see their own history.
-        return ResponseEntity.ok(orderService.getOrdersByUser(username));
+        return ResponseEntity.ok(orderService.getOrdersByUser(username, pageable));
     }
 }
