@@ -20,9 +20,11 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
+        String method = exchange.getRequest().getMethod().name();
 
-        // Bypass authentication for public auth and actuator endpoints
-        if (path.startsWith("/auth/") || path.startsWith("/actuator/")) {
+        // Bypass authentication for public auth, actuator, and GET products catalog endpoints
+        if (path.startsWith("/auth/") || path.startsWith("/actuator/") || 
+            ((path.startsWith("/api/v1/products") || path.equals("/api/v1/products")) && "GET".equalsIgnoreCase(method))) {
             return chain.filter(exchange);
         }
 
@@ -46,7 +48,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 String role = claims.get("role", String.class);
 
                 // Enforce ADMIN role on write operations to product or inventory paths
-                String method = exchange.getRequest().getMethod().name();
                 if ((path.startsWith("/api/v1/products") || path.startsWith("/api/v1/inventory"))
                         && (method.equals("POST") || method.equals("PUT") || method.equals("DELETE"))) {
                     if (role == null || !role.equalsIgnoreCase("ADMIN")) {
