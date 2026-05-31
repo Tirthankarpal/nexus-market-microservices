@@ -21,12 +21,24 @@ spring:
             - id: product-service-route
               uri: lb://PRODUCT-SERVICE
               predicates:
-                - Path=/api/v1/products/**
+                - Path=/api/v1/products, /api/v1/products/**
               filters:
                 - name: CircuitBreaker
                   args:
                     name: productCircuitBreaker
                     fallbackUri: forward:/fallback/product
+
+            # Route for Orders
+            - id: order-service-route
+              uri: lb://ORDER-SERVICE
+              predicates:
+                - Path=/api/v1/orders, /api/v1/orders/**
+
+            # Route for Inventory
+            - id: inventory-service-route
+              uri: lb://INVENTORY-SERVICE
+              predicates:
+                - Path=/api/v1/inventory, /api/v1/inventory/**
 
 # These settings enable the route debugging endpoint
 management:

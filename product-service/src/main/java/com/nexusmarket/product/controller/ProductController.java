@@ -10,18 +10,14 @@ import java.util.List;
 @RestController // Tells Spring this class handles REST API requests
 @RequestMapping("/api/v1/products") // The base URL for all endpoints in this class
 public class ProductController {
-
     private final ProductService productService;
-
     public ProductController(ProductService productService) {
         this.productService = productService;
     }
-
     @GetMapping // Handles GET requests to /api/v1/products
     public List<Product> getAllProducts() {
         return productService.getAllProducts();
     }
-
     @PostMapping // Handles POST requests to /api/v1/products to create a new product
     public Product createProduct(@Valid @RequestBody Product product) {
         return productService.saveProduct(product);
