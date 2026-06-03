@@ -26,6 +26,7 @@ Thumbs.db
 # Keep your actual database and API credentials local
 .env
 .env.*
+!.env.prod.template
 
 # --- Log Files ---
 *.log
