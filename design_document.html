@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Nexus Market Design Document</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            color: #1a365d;
+            font-family: 'Georgia', serif;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        h1 {
+            border-bottom: 2px solid #2b6cb0;
+            padding-bottom: 0.3em;
+            font-size: 2.2em;
+        }
+        h2 {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.2em;
+            font-size: 1.7em;
+        }
+        h3 {
+            font-size: 1.3em;
+        }
+        a {
+            color: #3182ce;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        code {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+            color: #c53030;
+        }
+        pre {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            overflow-x: auto;
+        }
+        pre code {
+            background-color: transparent;
+            border: none;
+            padding: 0;
+            color: #2d3748;
+            font-size: 0.85em;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #ebf8ff;
+            color: #2b6cb0;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+        blockquote {
+            border-left: 4px solid #3182ce;
+            background-color: #ebf8ff;
+            margin: 1.5em 10px;
+            padding: 0.5em 10px;
+            color: #2c5282;
+        }
+        hr {
+            border: 0;
+            height: 1px;
+            background: #e2e8f0;
+            margin: 2em 0;
+        }
+    </style>
+</head>
+<body>
+<h1>Nexus Market — Full-Stack Microservices Architecture &amp; Design Document</h1>
+<p>Welcome to the definitive system blueprint and design specification for <strong>Nexus Market</strong> — a high-performance, resilient, and enterprise-grade e-commerce application. This document details the architectural layout, service interactions, security implementations, and frontend-to-backend orchestrations of the entire Nexus Market platform.</p>
+<hr />
+<h2>🏗️ 1. Global System Architecture</h2>
+<p>Nexus Market is built using a highly decoupled <strong>Spring Cloud Service Mesh</strong> on the backend and a reactive <strong>React + Vite</strong> frontend. Each operational boundary is strictly isolated, utilizing database-per-service patterns, synchronous service-to-service REST communication with dynamic load balancing, and asynchronous event-driven notifications.</p>
+<h3>📐 Structural Blueprint</h3>
+<p>The following Mermaid diagram visualizes the request lifecycle, service registration, event messaging, and data persistence layers:</p>
+<pre><code class="language-mermaid">graph TD
+    Client[&quot;Client / React Frontend (Port 5173)&quot;] --&gt;|&quot;REST APIs (Port 8000)&quot;| Gateway[&quot;API Gateway (Port 8000)&quot;]
+    Gateway --&gt;|&quot;Verify JWT &amp; Rate Limits&quot;| GatewayFilter[&quot;Global Filters&lt;br/&gt;(AuthenticationFilter, RateLimitingFilter)&quot;]
+
+    subgraph Discovery &amp; Coordination
+        Eureka[&quot;Eureka Discovery Server (Port 8761)&quot;]
+    end
+
+    Gateway -.-&gt;|&quot;Fetch Registry&quot;| Eureka
+
+    subgraph Spring Cloud Service Mesh
+        AuthSvc[&quot;Auth Service (Port 8082)&quot;]
+        ProdSvc[&quot;Product Service (Port 8081)&quot;]
+        InvSvc[&quot;Inventory Service (Port 8084)&quot;]
+        OrdSvc[&quot;Order Service (Port 8083)&quot;]
+        NotifSvc[&quot;Notification Service (Port 8085)&quot;]
+    end
+
+    Gateway --&gt;|&quot;Route: /auth/**&quot;| AuthSvc
+    Gateway --&gt;|&quot;Route: /api/v1/products/**&quot;| ProdSvc
+    Gateway --&gt;|&quot;Route: /api/v1/orders/**&quot;| OrdSvc
+    Gateway --&gt;|&quot;Route: /api/v1/inventory/**&quot;| InvSvc
+
+    AuthSvc -.-&gt;|&quot;Register Instance&quot;| Eureka
+    ProdSvc -.-&gt;|&quot;Register Instance&quot;| Eureka
+    InvSvc -.-&gt;|&quot;Register Instance&quot;| Eureka
+    OrdSvc -.-&gt;|&quot;Register Instance&quot;| Eureka
+    NotifSvc -.-&gt;|&quot;Register Instance&quot;| Eureka
+
+    subgraph Event-Driven Broker
+        Kafka[&quot;Kafka Message Broker (Port 9092)&quot;]
+    end
+
+    OrdSvc --&gt;|&quot;Publish 'order-placed' event&quot;| Kafka
+    Kafka --&gt;|&quot;Consume 'order-placed' event&quot;| NotifSvc
+
+    OrdSvc --&gt;|&quot;Verify &amp; Deduct Stock&lt;br/&gt;(WebClient)&quot;| InvSvc
+
+    subgraph Persistent Storage
+        Postgres[(&quot;Shared PostgreSQL Container&lt;br/&gt;(nexus-postgres)&quot;)]
+    end
+
+    AuthSvc --&gt;|&quot;Auth Database (nexus_auth)&quot;| Postgres
+    ProdSvc --&gt;|&quot;Product Database (product_db)&quot;| Postgres
+    InvSvc --&gt;|&quot;Inventory Database (inventory_db)&quot;| Postgres
+    OrdSvc --&gt;|&quot;Order Database (order_db)&quot;| Postgres
+</code></pre>
+<hr />
+<h2>🔒 2. Security, Authentication &amp; Gateway Filters</h2>
+<p>The <strong>API Gateway</strong> acts as the singular entrance into the system, enforcing edge-level rate-limiting and authorization boundaries before requests ever touch downstream microservices.</p>
+<h3>🛡️ A. Authentication &amp; Custom Role Propagation</h3>
+<p>API Gateway uses a global <code>AuthenticationFilter</code> to validate JWT digital signatures. 
+* <strong>Public Bypasses</strong>: Bypasses authentication for <code>/auth/login</code>, <code>/auth/register</code>, <code>/actuator/**</code>, and <code>GET /api/v1/products</code> (so guests can browse the catalog).
+* <strong>Role Enforcement</strong>: If a request attempts a write operation (e.g. <code>POST</code>, <code>PUT</code>, <code>DELETE</code>) on products or inventory, the filter inspects the JWT claims. If the user doesn't possess the <code>ADMIN</code> role, the gateway returns a <code>403 Forbidden</code> response.
+* <strong>Context Propagation</strong>: Once validated, the Gateway strips the <code>Bearer</code> header and injects mutated headers downstream:
+  * <code>X-Authenticated-User</code>: Propagates the subject (username/email).
+  * <code>X-Authenticated-Role</code>: Propagates the role claim (<code>USER</code> or <code>ADMIN</code>).
+  Downstream services rely on these headers rather than validating the JWT again, establishing a zero-trust network interface within the service mesh.</p>
+<h3>⏳ B. Custom Token Bucket Rate Limiting</h3>
+<p>To prevent brute-force attacks on identity boundaries, the gateway implements a custom, thread-safe <code>TokenBucket</code> filter running early in the chain (<code>order = -2</code>):
+* <strong>Target Paths</strong>: Applied strictly to <code>/auth/login</code> and <code>/auth/register</code>.
+* <strong>Thresholds</strong>: Configured with a bucket capacity of <code>5</code> tokens and a refill rate of <code>1</code> token every <code>12</code> seconds (effectively a maximum sustained rate of <code>5 requests per minute</code>).
+* <strong>Under the Hood</strong>: Uses <code>ConcurrentHashMap</code> to track token buckets per IP address. When exhausted, the Gateway returns a detailed JSON body with HTTP status <code>429 Too Many Requests</code>.</p>
+<hr />
+<h2>📦 3. Core Microservices Architecture</h2>
+<h3>🛡️ I. API Gateway (<code>api-gateway</code>)</h3>
+<ul>
+<li><strong>Framework</strong>: Spring Cloud Gateway (Netty, Reactive Webflux)</li>
+<li><strong>Port</strong>: <code>8000</code></li>
+<li><strong>Key Features</strong>: </li>
+<li>Integrates <strong>Resilience4j Circuit Breaker</strong> for product routing (<code>productCircuitBreaker</code>).</li>
+<li>If <code>product-service</code> fails, requests are forwarded to <code>FallbackController</code> at <code>/fallback/product</code>, returning a graceful user-friendly offline message.</li>
+<li>Dynamically load balances downstream routes using Eureka client-side discovery (<code>lb://</code>).</li>
+</ul>
+<h3>🔑 II. Authentication Service (<code>auth-service</code>)</h3>
+<ul>
+<li><strong>Port</strong>: <code>8082</code></li>
+<li><strong>Database Schema</strong>: <code>nexus_auth</code> (table: <code>user_credentials</code>)</li>
+<li><strong>Endpoints</strong>:</li>
+<li><code>POST /register</code>: Registers a new user. Accepts <code>UserCredential</code> JSON (username, password, role). Hashes password using BCrypt.</li>
+<li><code>POST /login</code>: Validates credentials. Generates a signed JWT with role claim, expiring after default duration, sealed with a strong 256-bit HMAC key.</li>
+</ul>
+<h3>🏷️ III. Product Service (<code>product-service</code>)</h3>
+<ul>
+<li><strong>Port</strong>: <code>8081</code></li>
+<li><strong>Database Schema</strong>: <code>product_db</code> (table: <code>products</code>)</li>
+<li><strong>Key Features</strong>:</li>
+<li><strong>Spring Virtual Threads</strong> (<code>spring.threads.virtual.enabled=true</code>): Runs on Java 25. High-throughput concurrency handling designed to minimize thread starvation during heavy blocking database access.</li>
+<li>Exposes standard CRUD endpoints with built-in Spring Data pagination (<code>Page&lt;Product&gt;</code>).</li>
+<li><strong>Endpoints</strong>:</li>
+<li><code>GET /api/v1/products</code>: Paginated, sortable catalog access (public).</li>
+<li><code>GET /api/v1/products/{id}</code>: Single product access.</li>
+<li><code>POST /api/v1/products</code>: Product creation (Admin only).</li>
+<li><code>PUT /api/v1/products/{id}</code>: Product updating (Admin only).</li>
+<li><code>DELETE /api/v1/products/{id}</code>: Product deletion (Admin only).</li>
+</ul>
+<h3>📊 IV. Inventory Service (<code>inventory-service</code>)</h3>
+<ul>
+<li><strong>Port</strong>: <code>8084</code></li>
+<li><strong>Database Schema</strong>: <code>inventory_db</code> (table: <code>inventory</code>)</li>
+<li><strong>Key Features</strong>:</li>
+<li><strong>Concurrency Guarantees</strong>: Employs <code>@Lock(LockModeType.PESSIMISTIC_WRITE)</code> query overrides when fetching rows for deduction. This locks database rows at the transaction level, preventing concurrent modifications and assuring zero-risk race conditions when multiple orders deduct the same product.</li>
+<li><strong>Endpoints</strong>:</li>
+<li><code>GET /api/v1/inventory</code>: Bulk SKU availability queries.</li>
+<li><code>PUT /api/v1/inventory/deduct</code>: Deducts quantities from specified SKU.</li>
+<li><code>POST /api/v1/inventory</code>: Creates/increments SKU stock (Admin only).</li>
+<li><code>PUT /api/v1/inventory/set</code>: Overrides absolute SKU stock quantities (Admin only).</li>
+</ul>
+<h3>🛒 V. Order Service (<code>order-service</code>)</h3>
+<ul>
+<li><strong>Port</strong>: <code>8083</code></li>
+<li><strong>Database Schema</strong>: <code>order_db</code> (tables: <code>orders</code>, <code>order_items</code>)</li>
+<li><strong>Key Features</strong>:</li>
+<li>Synchronously orchestrates inventory checking and deduction before finalizing order creation.</li>
+<li>Relies on standard transactional boundaries (<code>@Transactional</code>). If stock deduction succeeds but order validation fails, modifications rollback gracefully.</li>
+<li><strong>Endpoints</strong>:</li>
+<li><code>POST /api/v1/orders</code>: Places a new order. Reads credentials from <code>X-Authenticated-User</code> header.</li>
+<li><code>GET /api/v1/orders</code>: Order history. If <code>X-Authenticated-Role</code> is <code>ADMIN</code>, returns all orders. Otherwise, filters to only retrieve the active user's orders.</li>
+</ul>
+<h3>📧 VI. Notification Service (<code>notification-service</code>)</h3>
+<ul>
+<li><strong>Port</strong>: <code>8085</code></li>
+<li><strong>Database</strong>: None (Stateless)</li>
+<li><strong>Key Features</strong>:</li>
+<li>Asynchronously listens for messages on the Kafka broker.</li>
+<li>Consumes from topic <code>order-placed</code> under the consumer group <code>notification-group</code>.</li>
+<li>Logs the mock email receipt dispatch confirming order details.</li>
+</ul>
+<hr />
+<h2>🔄 4. Order Checkout Lifecycle &amp; Concurrency Flow</h2>
+<p>When a user clicks <strong>"Place Secured Order"</strong> on the frontend, the following transaction sequence ensures strict data integrity:</p>
+<pre><code class="language-text">[Client]                [Order Service]          [Inventory Service]      [Kafka Broker]      [Notification Service]
+   │                           │                          │                     │                       │
+   │─── POST /api/v1/orders ──&gt;│                          │                     │                       │
+   │                           │─── Check Stock Levels ──&gt;│                     │                       │
+   │                           │    (GET /inventory)      │                     │                       │
+   │                           │&lt;── Returns quantities ───│                     │                       │
+   │                           │                          │                     │                       │
+   │                           │─── Deduct Quantities ───&gt;│                     │                       │
+   │                           │    (PUT /deduct)         │                     │                       │
+   │                           │    [PESSIMISTIC WRITE]   │                     │                       │
+   │                           │&lt;── Stock Deducted ───────│                     │                       │
+   │                           │                          │                     │                       │
+   │                           │─── Save Order &amp; Items ───│                     │                       │
+   │                           │    to order_db           │                     │                       │
+   │                           │                          │                     │                       │
+   │                           │─── Publish Order Event ───────────────────────&gt;│                       │
+   │                           │    (Asynchronous)                              │─── Dispatch Event ───&gt;│
+   │                           │                                                │    to Consumer        │
+   │                           │                                                │                       │─── Log mock email
+   │&lt;── 201 Created (Order) ───│                                                │                       │    sent to user
+</code></pre>
+<hr />
+<h2>🗄️ 5. Database Schema &amp; Initialization</h2>
+<p>Nexus Market deploys PostgreSQL <code>17-alpine</code> containerized as the global database engine. To enforce schema decoupling, the database engine initializes multiple isolated databases via <code>init-scripts</code> folders mounted inside docker:</p>
+<h3>Database Seeding Specifications:</h3>
+<ol>
+<li><code>init.sql</code>: Automatically executed upon first launch to build isolated service schemas:
+   <code>sql
+   CREATE DATABASE product_db;
+   CREATE DATABASE order_db;
+   CREATE DATABASE inventory_db;</code></li>
+<li><code>seed_products.sql</code>: Seeds the catalog within the <code>product_db</code> database.</li>
+<li><code>seed_inventory.sql</code>: Seeds identical SKU stock level counterparts inside the <code>inventory_db</code> database, ensuring alignment of initial records (e.g. <em>Nexus Quantum Laptop</em>, <em>Omni Pro Curved Monitor</em>, <em>Holographic Mech Keyboard</em>, etc.).</li>
+</ol>
+<hr />
+<h2>💻 6. Frontend Architecture (React + Vite)</h2>
+<p>The frontend is a modern SPA designed using <strong>React + Vite</strong>, utilizing custom context providers, modern grid layouts, smooth CSS mesh transitions, and beautiful interactive feedback panels.</p>
+<h3>🧭 A. Routes</h3>
+<ul>
+<li><code>/catalog</code>: Displays high-performance inventory with responsive grid cards.</li>
+<li><code>/login</code> &amp; <code>/register</code>: Custom, premium glassmorphism input screens with full verification state.</li>
+<li><code>/cart</code>: Review selections, update quantities, check threshold limit boundaries, and execute checkout.</li>
+<li><code>/admin</code>: Admin console showing real-time metrics (Total Catalog Valuation, Out of Stock totals, etc.), catalog updating tables, and product creators.</li>
+</ul>
+<h3>🌐 B. Global Context Architecture</h3>
+<ol>
+<li><strong><code>AuthContext</code></strong>:</li>
+<li>Stores user state, login credentials, and session tokens.</li>
+<li>Leverages browser-level base64 JWT payload parsing (<code>parseJwt()</code>) to dynamically read authentication details and populate the client-side role (<code>ADMIN</code> or <code>USER</code>) reactively.</li>
+<li><strong><code>CartContext</code></strong>:</li>
+<li>Reactively binds cart items according to active authentication.</li>
+<li><strong>Guest Mode</strong>: Saves and updates anonymous cart details under local storage key <code>cart</code>.</li>
+<li><strong>Session Sync</strong>: Upon successful registration or login, guest items are automatically adopted and migrated into the user's specific storage bucket (<code>cart_&lt;username&gt;</code>), clearing guest entries immediately.</li>
+<li><strong>Reactive Segregation</strong>: Once logged out, the active checkout view switches back to guest mode or remains empty.</li>
+</ol>
+<h3>🎮 C. Robust Fallbacks: Offline Simulator Mode</h3>
+<p>The frontend is built to be resilient. If the gateway backend is offline or its databases are empty during catalog retrieval, the frontend triggers <strong>Offline Simulation Mode</strong>:
+* <strong>Action</strong>: Catches the network exception and displays a friendly notice panel (<code>Offline Simulation Active</code>).
+* <strong>Simulation Data</strong>: Dynamically loads 8 premium offline dummy products, enabling seamless local testing of cart adjustments, pagination configurations, grid filters, and responsive panel rendering without backend dependencies.</p>
+<hr />
+<h2>🚀 7. Key Production Configuration Parameters (Spring Boot)</h2>
+<p>For optimal service mesh scaling, downstream Spring Boot microservices utilize these advanced parameters inside <code>application.properties</code>:</p>
+<ul>
+<li><strong>Spring Threads Virtual</strong>:
+  <code>properties
+  spring.threads.virtual.enabled=true</code>
+  <em>Allocates lightweight Java Virtual Threads for request execution, reducing resource footprint and speeding up asynchronous context switching under heavy database locking phases.</em></li>
+<li><strong>Hikari Database Connection Pool Limits</strong>:
+  <code>properties
+  spring.datasource.hikari.maximum-pool-size=20
+  spring.datasource.hikari.connection-timeout=30000
+  spring.datasource.hikari.idle-timeout=600000
+  spring.datasource.hikari.max-lifetime=1800000</code>
+  <em>Saves connection allocation delay, preventing requests from hanging indefinitely and releasing idle database connections efficiently.</em></li>
+</ul>
+</body>
+</html>
