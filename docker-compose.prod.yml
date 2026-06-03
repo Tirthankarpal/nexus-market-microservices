@@ -97,14 +97,15 @@ services:
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-      KAFKA_HEAP_OPTS: "-Xmx192m -Xms192m"
+      KAFKA_HEAP_OPTS: "-Xmx256m -Xms256m"
       KAFKA_JVM_PERFORMANCE_OPTS: "-server -XX:+UseSerialGC -Djava.awt.headless=true"
+      # Memory tuning: reduce log cleaner dedupe buffer size (default is 128MB, too large for 256MB heap)
+      KAFKA_LOG_CLEANER_DEDUPE_BUFFER_SIZE: "2097152"
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 320M
     restart: always
-
   inventory-service:
     build: ./inventory-service
     container_name: inventory-service
