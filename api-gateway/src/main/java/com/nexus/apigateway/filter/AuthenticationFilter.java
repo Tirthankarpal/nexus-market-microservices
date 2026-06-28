@@ -14,8 +14,11 @@ import reactor.core.publisher.Mono;
 @Component
 public class AuthenticationFilter implements GlobalFilter, Ordered {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
+
+    public AuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {

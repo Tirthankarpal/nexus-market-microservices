@@ -7,13 +7,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController // Tells Spring this class handles REST API requests
 @RequestMapping("/api/v1/products") // The base URL for all endpoints in this class
+@RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
-    public ProductController(ProductService productService) {
-        this.productService = productService;
-    }
     @GetMapping // Handles GET requests to /api/v1/products
     public org.springframework.data.domain.Page<Product> getAllProducts(org.springframework.data.domain.Pageable pageable) {
         return productService.getAllProducts(pageable);

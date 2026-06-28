@@ -7,12 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
+@RequiredArgsConstructor
 // Removing @RequestMapping("/auth") here to match the stripped path coming from Gateway
 public class AuthController {
 
-    @Autowired
-    private AuthService service;
+    private final AuthService service;
 
     @PostMapping("/register") // Matches the stripped path
     public String addNewUser(@Valid @RequestBody UserCredential user) {

@@ -17,6 +17,7 @@ import java.util.*;
 
 @Service
 @Transactional
+@lombok.extern.slf4j.Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -111,7 +112,7 @@ public class OrderService {
                 kafkaTemplate.send("order-placed", event);
             } catch (Exception e) {
                 // Log dispatch failures to prevent rolling back successful order creations
-                System.err.println("Failed to publish order event to Kafka: " + e.getMessage());
+                log.error("Failed to publish order event to Kafka: {}", e.getMessage(), e);
             }
         }
 

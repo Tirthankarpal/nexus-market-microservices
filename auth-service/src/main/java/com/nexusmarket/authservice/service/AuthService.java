@@ -7,15 +7,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.nexusmarket.authservice.exception.InvalidCredentialsException;
+import com.nexusmarket.authservice.exception.UserNotFoundException;
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
-    @Autowired
-    private UserRepository repository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final UserRepository repository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     // 1. Register a new user (Hashes the password before saving!)
     public String saveUser(UserCredential credential) {
@@ -28,14 +30,14 @@ public class AuthService {
     public String generateToken(String username, String rawPassword) {
         // Fetch the user from the database
         UserCredential user = repository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         // Compare the raw password with the hashed password in the DB
         if (passwordEncoder.matches(rawPassword, user.getPassword())) {
             // If they match, generate the digital wax seal (JWT)
             return jwtUtil.generateToken(username, user.getRole());
         } else {
-            throw new RuntimeException("Invalid Password");
+            throw new InvalidCredentialsException("Invalid Password");
         }
     }
 }

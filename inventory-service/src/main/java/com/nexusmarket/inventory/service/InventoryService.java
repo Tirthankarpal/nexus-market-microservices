@@ -9,6 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.nexusmarket.inventory.exception.InsufficientStockException;
+import com.nexusmarket.inventory.exception.InventoryNotFoundException;
+
 @Service
 public class InventoryService {
 
@@ -39,10 +42,10 @@ public class InventoryService {
     public void deductStock(String skuCode, Integer quantity) {
         // Lock database row to prevent concurrent modifications during decrement
         Inventory inventory = inventoryRepository.findBySkuCodeWithLock(skuCode)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found in inventory: " + skuCode));
+                .orElseThrow(() -> new InventoryNotFoundException("Product not found in inventory: " + skuCode));
 
         if (inventory.getQuantity() < quantity) {
-            throw new IllegalArgumentException("Insufficient stock for SKU " + skuCode + ". Available: " + inventory.getQuantity() + ", Requested: " + quantity);
+            throw new InsufficientStockException("Insufficient stock for SKU " + skuCode + ". Available: " + inventory.getQuantity() + ", Requested: " + quantity);
         }
 
         inventory.setQuantity(inventory.getQuantity() - quantity);
