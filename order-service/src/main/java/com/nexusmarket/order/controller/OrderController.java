@@ -37,7 +37,7 @@ public class OrderController {
     @GetMapping
     public ResponseEntity<?> getOrders(
             @RequestHeader("X-Authenticated-User") String username,
-            @RequestHeader("X-Authenticated-Role") String role,
+            @RequestHeader(value = "X-Authenticated-Role", required = false) String role,
             org.springframework.data.domain.Pageable pageable) {
         
         // ADMIN gets to see all orders in the entire system.

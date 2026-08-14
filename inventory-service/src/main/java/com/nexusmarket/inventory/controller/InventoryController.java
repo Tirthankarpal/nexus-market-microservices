@@ -38,6 +38,17 @@ public class InventoryController {
     }
 
     /**
+     * Endpoint to restore stock (typically called by Order Service during Saga compensation).
+     */
+    @PutMapping("/restore")
+    public ResponseEntity<Void> restoreStock(
+            @RequestParam String skuCode,
+            @RequestParam Integer quantity) {
+        inventoryService.restoreStock(skuCode, quantity);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * Endpoint to add stock (restricted to ADMIN role).
      */
     @PostMapping

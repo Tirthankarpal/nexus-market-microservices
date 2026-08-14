@@ -22,17 +22,13 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + id));
     }
     public Product saveProduct(Product product) {
-        // This is where you would add business rules, like:
-        // if (product.getPrice() < 0) throw new InvalidPriceException();
         return productRepository.save(product);
     }
     public Product updateProduct(Long id, Product updatedProduct) {
         Product existingProduct = getProductById(id); // Reuses our 404 logic!
-
         existingProduct.setName(updatedProduct.getName());
         existingProduct.setPrice(updatedProduct.getPrice());
         existingProduct.setStockQuantity(updatedProduct.getStockQuantity());
-
         return productRepository.save(existingProduct);
     }
     public void deleteProduct(Long id) {

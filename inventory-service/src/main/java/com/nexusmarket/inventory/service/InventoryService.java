@@ -51,6 +51,18 @@ public class InventoryService {
         inventory.setQuantity(inventory.getQuantity() - quantity);
         inventoryRepository.save(inventory);
     }
+
+    /**
+     * Restores stock for a given SKU (used for Saga compensation).
+     */
+    @Transactional
+    public void restoreStock(String skuCode, Integer quantity) {
+        Inventory inventory = inventoryRepository.findBySkuCodeWithLock(skuCode)
+                .orElseThrow(() -> new InventoryNotFoundException("Product not found in inventory: " + skuCode));
+
+        inventory.setQuantity(inventory.getQuantity() + quantity);
+        inventoryRepository.save(inventory);
+    }
     
     /**
      * Adds or updates stock for a SKU.

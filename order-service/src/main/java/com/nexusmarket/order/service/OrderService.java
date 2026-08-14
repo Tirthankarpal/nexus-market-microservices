@@ -4,10 +4,15 @@ import com.nexusmarket.order.dto.InventoryResponse;
 import com.nexusmarket.order.dto.OrderItemDto;
 import com.nexusmarket.order.dto.OrderRequest;
 import com.nexusmarket.order.event.OrderPlacedEvent;
+import com.nexusmarket.order.event.OrderConfirmedEvent;
+import com.nexusmarket.order.event.PaymentRequiredEvent;
+import com.nexusmarket.order.event.PaymentCompletedEvent;
 import com.nexusmarket.order.model.Order;
 import com.nexusmarket.order.model.OrderItem;
+import com.nexusmarket.order.model.OrderStatus;
 import com.nexusmarket.order.repository.OrderRepository;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -22,14 +27,14 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final WebClient.Builder webClientBuilder;
-    private final KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
+    private final KafkaTemplate<Object, Object> kafkaTemplate;
 
     public OrderService(OrderRepository orderRepository, 
                         WebClient.Builder webClientBuilder, 
-                        java.util.Optional<KafkaTemplate<String, OrderPlacedEvent>> kafkaTemplate) {
+                        KafkaTemplate<Object, Object> kafkaTemplate) {
         this.orderRepository = orderRepository;
         this.webClientBuilder = webClientBuilder;
-        this.kafkaTemplate = kafkaTemplate.orElse(null);
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     /**
@@ -101,22 +106,64 @@ public class OrderService {
                 .userEmail(username)
                 .orderLineItemsList(itemsList)
                 .totalAmount(totalAmount)
+                .status(OrderStatus.PENDING)
                 .build();
 
         Order savedOrder = orderRepository.save(order);
 
-        // Dispatch order confirmation event via Kafka asynchronously
+        // Dispatch payment required event via Kafka asynchronously
         if (kafkaTemplate != null) {
             try {
-                OrderPlacedEvent event = new OrderPlacedEvent(savedOrder.getOrderNumber(), username);
-                kafkaTemplate.send("order-placed", event);
+                PaymentRequiredEvent event = new PaymentRequiredEvent(savedOrder.getOrderNumber(), username, totalAmount);
+                kafkaTemplate.send("payment-required", event);
             } catch (Exception e) {
-                // Log dispatch failures to prevent rolling back successful order creations
-                log.error("Failed to publish order event to Kafka: {}", e.getMessage(), e);
+                // Log dispatch failures
+                log.error("Failed to publish payment required event to Kafka: {}", e.getMessage(), e);
             }
         }
 
         return savedOrder;
+    }
+
+    @KafkaListener(topics = "payment-completed", groupId = "order-group")
+    public void handlePaymentCompleted(PaymentCompletedEvent event) {
+        Order order = orderRepository.findByOrderNumber(event.orderNumber());
+        if (order == null) {
+            log.error("Order not found for orderNumber: {}", event.orderNumber());
+            return;
+        }
+
+        if (event.success()) {
+            order.setStatus(OrderStatus.CONFIRMED);
+            orderRepository.save(order);
+
+            if (kafkaTemplate != null) {
+                OrderConfirmedEvent confirmedEvent = new OrderConfirmedEvent(order.getOrderNumber(), order.getUserEmail());
+                kafkaTemplate.send("order-confirmed", confirmedEvent);
+            }
+            log.info("Order {} confirmed successfully.", event.orderNumber());
+        } else {
+            order.setStatus(OrderStatus.CANCELLED);
+            orderRepository.save(order);
+            log.warn("Payment failed for order {}. Restoring inventory.", event.orderNumber());
+
+            // Rollback inventory
+            for (OrderItem item : order.getOrderLineItemsList()) {
+                try {
+                    webClientBuilder.build().put()
+                            .uri("http://inventory-service/api/v1/inventory/restore",
+                                    uriBuilder -> uriBuilder
+                                            .queryParam("skuCode", item.getSkuCode())
+                                            .queryParam("quantity", item.getQuantity())
+                                            .build())
+                            .retrieve()
+                            .toBodilessEntity()
+                            .block();
+                } catch (Exception e) {
+                    log.error("Failed to restore inventory for SKU: {}", item.getSkuCode(), e);
+                }
+            }
+        }
     }
 
     @Transactional(readOnly = true)

@@ -11,7 +11,5 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    // You don't need to write any methods here yet!
-    // By extending JpaRepository, you automatically get:
-    // .save(), .findAll(), .findById(), .deleteById(), and more.
+
 }

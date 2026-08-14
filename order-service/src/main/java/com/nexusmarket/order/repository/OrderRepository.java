@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
     org.springframework.data.domain.Page<Order> findByUserEmail(String userEmail, org.springframework.data.domain.Pageable pageable);
+    Order findByOrderNumber(String orderNumber);
 }
