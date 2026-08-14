@@ -115,7 +115,7 @@ public class OrderService {
         if (kafkaTemplate != null) {
             try {
                 PaymentRequiredEvent event = new PaymentRequiredEvent(savedOrder.getOrderNumber(), username, totalAmount);
-                kafkaTemplate.send("payment-required", event);
+                kafkaTemplate.send("payment-required", event).get(); // Force block to catch async errors!
             } catch (Exception e) {
                 // Log dispatch failures
                 log.error("Failed to publish payment required event to Kafka: {}", e.getMessage(), e);
