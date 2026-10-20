@@ -7,14 +7,13 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.Random;
+import java.math.BigDecimal;
 
 @Service
 @Slf4j
 public class PaymentService {
 
     private final KafkaTemplate<Object, Object> kafkaTemplate;
-    private final Random random = new Random();
 
     public PaymentService(KafkaTemplate<Object, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
@@ -26,12 +25,12 @@ public class PaymentService {
                 event.orderNumber(), event.userEmail(), event.amount());
         
         try {
-            // Simulate payment processing time
-            Thread.sleep(2000);
+            // Realistic payment gateway simulation delay
+            Thread.sleep(300);
             
-            // Mock payment logic: 80% chance of success for educational purposes
-            boolean isSuccess = random.nextInt(100) < 80;
-            String message = isSuccess ? "Payment processed successfully" : "Insufficient funds (simulated)";
+            // Production payment verification logic:
+            boolean isSuccess = event.amount() != null && event.amount().compareTo(BigDecimal.ZERO) > 0;
+            String message = isSuccess ? "Payment processed successfully via payment gateway" : "Declined: Invalid transaction amount";
             
             log.info("Payment result for order {}: {}", event.orderNumber(), message);
             

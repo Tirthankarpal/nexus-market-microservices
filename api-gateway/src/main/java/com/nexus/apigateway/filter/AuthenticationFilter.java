@@ -1,7 +1,6 @@
 package com.nexus.apigateway.filter;
 
 import com.nexus.apigateway.util.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -25,10 +24,21 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
         String method = exchange.getRequest().getMethod().name();
 
-        // Bypass authentication for public auth, actuator, and GET products catalog endpoints
-        if (path.startsWith("/auth/") || path.startsWith("/actuator/") || 
-            ((path.startsWith("/api/v1/products") || path.equals("/api/v1/products")) && "GET".equalsIgnoreCase(method))) {
-            return chain.filter(exchange);
+        // Bypass authentication for public auth, actuator health/info, and public GET catalog endpoints
+        boolean isPublicPath = path.startsWith("/auth/") || 
+                               path.equals("/actuator/health") || 
+                               path.equals("/actuator/info") || 
+                               ((path.startsWith("/api/v1/products") || path.equals("/api/v1/products")) && "GET".equalsIgnoreCase(method));
+
+        if (isPublicPath) {
+            // Strip any forged X-Authenticated-* headers from unauthenticated public requests
+            org.springframework.http.server.reactive.ServerHttpRequest cleanRequest = exchange.getRequest().mutate()
+                    .headers(httpHeaders -> {
+                        httpHeaders.remove("X-Authenticated-User");
+                        httpHeaders.remove("X-Authenticated-Role");
+                    })
+                    .build();
+            return chain.filter(exchange.mutate().request(cleanRequest).build());
         }
 
         // Verify the presence of the Authorization header
@@ -59,7 +69,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                     }
                 }
 
-                // Propagate authenticated user context downstream
+                // Propagate verified authenticated user context downstream
                 org.springframework.http.server.reactive.ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                         .header("X-Authenticated-User", username)
                         .header("X-Authenticated-Role", role != null ? role : "USER")

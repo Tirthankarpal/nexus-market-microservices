@@ -17,12 +17,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Global rate-limiting filter configured to mitigate brute-force attempts
- * on authentication endpoints using the Token Bucket algorithm.
+ * on authentication endpoints using the Token Bucket algorithm with memory guardrails.
  */
 @Component
 public class RateLimitingFilter implements GlobalFilter, Ordered {
 
     private final Map<String, TokenBucket> limiters = new ConcurrentHashMap<>();
+    private static final int MAX_TRACKED_IPS = 10000;
 
     private static final long BUCKET_CAPACITY = 5;
     private static final long REFILL_TOKENS = 1;
@@ -34,6 +35,12 @@ public class RateLimitingFilter implements GlobalFilter, Ordered {
 
         if (path.startsWith("/auth/login") || path.startsWith("/auth/register")) {
             String clientIp = getClientIp(exchange.getRequest());
+
+            // Memory guardrail: prevent unbounded map expansion under DDoS
+            if (limiters.size() >= MAX_TRACKED_IPS && !limiters.containsKey(clientIp)) {
+                limiters.clear();
+            }
+
             TokenBucket bucket = limiters.computeIfAbsent(clientIp, 
                 ip -> new TokenBucket(BUCKET_CAPACITY, REFILL_TOKENS, REFILL_PERIOD_MS));
 

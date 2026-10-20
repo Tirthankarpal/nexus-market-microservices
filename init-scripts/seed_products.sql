@@ -1,4 +1,12 @@
--- Seed products in product_db
+\c product_db;
+
+CREATE TABLE IF NOT EXISTS products (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    price NUMERIC(19, 2),
+    stock_quantity INTEGER
+);
+
 INSERT INTO products (name, price, stock_quantity) VALUES 
 ('Nexus Quantum Laptop', 1299.99, 5),
 ('Omni Pro Curved Monitor', 449.99, 12),

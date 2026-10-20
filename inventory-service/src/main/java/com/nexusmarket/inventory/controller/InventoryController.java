@@ -33,6 +33,9 @@ public class InventoryController {
     public ResponseEntity<Void> deductStock(
             @RequestParam String skuCode,
             @RequestParam Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            return ResponseEntity.badRequest().build();
+        }
         inventoryService.deductStock(skuCode, quantity);
         return ResponseEntity.ok().build();
     }
@@ -44,6 +47,9 @@ public class InventoryController {
     public ResponseEntity<Void> restoreStock(
             @RequestParam String skuCode,
             @RequestParam Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            return ResponseEntity.badRequest().build();
+        }
         inventoryService.restoreStock(skuCode, quantity);
         return ResponseEntity.ok().build();
     }
@@ -60,6 +66,9 @@ public class InventoryController {
         // Enforce role-based boundary restriction
         if (!"ADMIN".equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only ADMIN can stock inventory items");
+        }
+        if (quantity == null || quantity <= 0) {
+            return ResponseEntity.badRequest().body("Quantity must be greater than zero");
         }
         
         inventoryService.addStock(skuCode, quantity);
@@ -78,6 +87,9 @@ public class InventoryController {
         // Enforce role-based boundary restriction
         if (!"ADMIN".equalsIgnoreCase(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only ADMIN can set stock levels");
+        }
+        if (quantity == null || quantity < 0) {
+            return ResponseEntity.badRequest().body("Quantity cannot be negative");
         }
         
         inventoryService.setStock(skuCode, quantity);

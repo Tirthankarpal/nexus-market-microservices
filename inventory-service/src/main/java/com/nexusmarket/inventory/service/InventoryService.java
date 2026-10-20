@@ -6,7 +6,9 @@ import com.nexusmarket.inventory.repository.InventoryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.nexusmarket.inventory.exception.InsufficientStockException;
@@ -26,13 +28,23 @@ public class InventoryService {
      */
     @Transactional(readOnly = true)
     public List<InventoryResponse> isInStock(List<String> skuCodes) {
-        return inventoryRepository.findBySkuCodeIn(skuCodes).stream()
-                .map(inventory -> new InventoryResponse(
-                        inventory.getSkuCode(),
-                        inventory.getQuantity() > 0,
-                        inventory.getQuantity()
-                ))
-                .collect(Collectors.toList());
+        if (skuCodes == null || skuCodes.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, Inventory> inventoryMap = inventoryRepository.findBySkuCodeIn(skuCodes).stream()
+                .collect(Collectors.toMap(Inventory::getSkuCode, inv -> inv, (a, b) -> a));
+
+        List<InventoryResponse> responses = new ArrayList<>();
+        for (String sku : skuCodes) {
+            Inventory inv = inventoryMap.get(sku);
+            if (inv != null) {
+                responses.add(new InventoryResponse(inv.getSkuCode(), inv.getQuantity() > 0, inv.getQuantity()));
+            } else {
+                responses.add(new InventoryResponse(sku, false, 0));
+            }
+        }
+        return responses;
     }
 
     /**
@@ -40,6 +52,10 @@ public class InventoryService {
      */
     @Transactional
     public void deductStock(String skuCode, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException("Quantity to deduct must be greater than zero");
+        }
+
         // Lock database row to prevent concurrent modifications during decrement
         Inventory inventory = inventoryRepository.findBySkuCodeWithLock(skuCode)
                 .orElseThrow(() -> new InventoryNotFoundException("Product not found in inventory: " + skuCode));
@@ -57,6 +73,10 @@ public class InventoryService {
      */
     @Transactional
     public void restoreStock(String skuCode, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException("Quantity to restore must be greater than zero");
+        }
+
         Inventory inventory = inventoryRepository.findBySkuCodeWithLock(skuCode)
                 .orElseThrow(() -> new InventoryNotFoundException("Product not found in inventory: " + skuCode));
 
@@ -65,22 +85,30 @@ public class InventoryService {
     }
     
     /**
-     * Adds or updates stock for a SKU.
+     * Adds or updates stock for a SKU with pessimistic lock to prevent lost updates.
      */
     @Transactional
     public void addStock(String skuCode, Integer quantity) {
-        Inventory inventory = inventoryRepository.findBySkuCode(skuCode)
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException("Quantity to add must be greater than zero");
+        }
+
+        Inventory inventory = inventoryRepository.findBySkuCodeWithLock(skuCode)
                 .orElse(Inventory.builder().skuCode(skuCode).quantity(0).build());
         inventory.setQuantity(inventory.getQuantity() + quantity);
         inventoryRepository.save(inventory);
     }
     
     /**
-     * Sets absolute stock level for a SKU.
+     * Sets absolute stock level for a SKU with pessimistic lock.
      */
     @Transactional
     public void setStock(String skuCode, Integer quantity) {
-        Inventory inventory = inventoryRepository.findBySkuCode(skuCode)
+        if (quantity == null || quantity < 0) {
+            throw new IllegalArgumentException("Stock quantity cannot be negative");
+        }
+
+        Inventory inventory = inventoryRepository.findBySkuCodeWithLock(skuCode)
                 .orElse(Inventory.builder().skuCode(skuCode).quantity(0).build());
         inventory.setQuantity(quantity);
         inventoryRepository.save(inventory);

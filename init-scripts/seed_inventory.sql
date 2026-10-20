@@ -1,4 +1,11 @@
--- Seed inventory in inventory_db
+\c inventory_db;
+
+CREATE TABLE IF NOT EXISTS inventory (
+    id BIGSERIAL PRIMARY KEY,
+    sku_code VARCHAR(255) NOT NULL UNIQUE,
+    quantity INTEGER NOT NULL
+);
+
 INSERT INTO inventory (sku_code, quantity) VALUES 
 ('Nexus Quantum Laptop', 5),
 ('Omni Pro Curved Monitor', 12),
