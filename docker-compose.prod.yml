@@ -6,13 +6,19 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${AUTH_DB_NAME}
+    command: postgres -c shared_buffers=32MB -c max_connections=40 -c work_mem=2MB
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d/:ro
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 160M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${AUTH_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: always
 
   discovery-server:
@@ -20,13 +26,13 @@ services:
     container_name: discovery-server
     environment:
       - EUREKA_PASSWORD=${EUREKA_PASSWORD}
-      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xmx80m -Xms32m -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1 -XX:ReservedCodeCacheSize=24m
     ports:
       - "127.0.0.1:8761:8761"
     deploy:
       resources:
         limits:
-          memory: 192M
+          memory: 140M
     restart: always
 
   api-gateway:
@@ -35,13 +41,13 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL}
       - JWT_SECRET=${JWT_SECRET}
-      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xmx80m -Xms32m -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1 -XX:ReservedCodeCacheSize=24m
     depends_on:
       - discovery-server
     deploy:
       resources:
         limits:
-          memory: 192M
+          memory: 140M
     restart: always
 
   product-service:
@@ -53,14 +59,16 @@ services:
       - SPRING_DATASOURCE_USERNAME=${DB_USER}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xmx80m -Xms32m -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1 -XX:ReservedCodeCacheSize=24m
     depends_on:
-      - postgres
-      - discovery-server
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
     deploy:
       resources:
         limits:
-          memory: 192M
+          memory: 140M
     restart: always
 
   auth-service:
@@ -72,14 +80,16 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
-      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xmx80m -Xms32m -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1 -XX:ReservedCodeCacheSize=24m
     depends_on:
-      - postgres
-      - discovery-server
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
     deploy:
       resources:
         limits:
-          memory: 192M
+          memory: 140M
     restart: always
 
   kafka:
@@ -101,13 +111,13 @@ services:
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-      KAFKA_HEAP_OPTS: "-Xmx400m -Xms400m"
-      KAFKA_JVM_PERFORMANCE_OPTS: "-server -XX:+UseSerialGC -Djava.awt.headless=true"
+      KAFKA_HEAP_OPTS: "-Xmx128m -Xms64m"
+      KAFKA_JVM_PERFORMANCE_OPTS: "-server -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Djava.awt.headless=true"
       KAFKA_LOG_CLEANER_DEDUPE_BUFFER_SIZE: "2097152"
     deploy:
       resources:
         limits:
-          memory: 600M
+          memory: 256M
     restart: always
 
   inventory-service:
@@ -119,14 +129,16 @@ services:
       - SPRING_DATASOURCE_USERNAME=${DB_USER}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xmx80m -Xms32m -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1 -XX:ReservedCodeCacheSize=24m
     depends_on:
-      - postgres
-      - discovery-server
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
     deploy:
       resources:
         limits:
-          memory: 192M
+          memory: 140M
     restart: always
 
   order-service:
@@ -139,15 +151,18 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
-      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xmx100m -Xms40m -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1 -XX:ReservedCodeCacheSize=24m
     depends_on:
-      - postgres
-      - discovery-server
-      - kafka
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      kafka:
+        condition: service_started
     deploy:
       resources:
         limits:
-          memory: 300M
+          memory: 160M
     restart: always
 
   notification-service:
@@ -156,14 +171,14 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL}
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
-      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xmx80m -Xms32m -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1 -XX:ReservedCodeCacheSize=24m
     depends_on:
       - discovery-server
       - kafka
     deploy:
       resources:
         limits:
-          memory: 192M
+          memory: 140M
     restart: always
 
   payment-service:
@@ -172,14 +187,14 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL}
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
-      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1
+      - JAVA_TOOL_OPTIONS=-XX:TieredStopAtLevel=1 -Xmx80m -Xms32m -XX:+UseSerialGC -Xss256k -XX:ActiveProcessorCount=1 -XX:ReservedCodeCacheSize=24m
     depends_on:
       - discovery-server
       - kafka
     deploy:
       resources:
         limits:
-          memory: 192M
+          memory: 140M
     restart: always
 
   nexus-frontend:
